@@ -42,6 +42,8 @@ const (
 	GT = ">"
 	COMMA = ","
 	SEMICOLON = ";"
+	EQ = "=="
+	NOT_EQ = "!="
 
 	// brackets
 	LPAREN = "("

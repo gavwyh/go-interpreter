@@ -34,7 +34,11 @@ func (l *Lexer) NextToken() token.Token {
 	case '-':
 		tok = newToken(token.MINUS, l.ch)
 	case '!':
-		tok = newToken(token.BANG, l.ch)
+		if literal, isComparison := l.readComparison(); isComparison {
+			tok = token.Token{Type: token.NOT_EQ, Literal: literal}
+		} else {
+			tok = newToken(token.BANG, l.ch)
+		}
 	case '/':
 		tok = newToken(token.SLASH, l.ch)
 	case '*':
@@ -44,7 +48,11 @@ func (l *Lexer) NextToken() token.Token {
 	case '>':
 		tok = newToken(token.GT, l.ch)
 	case '=':
-		tok = newToken(token.ASSIGN, l.ch)
+		if literal, isComparison := l.readComparison(); isComparison {
+			tok = token.Token{Type: token.EQ, Literal: literal}
+		} else {
+			tok = newToken(token.ASSIGN, l.ch)
+		}
 	case ';':
 		tok = newToken(token.SEMICOLON, l.ch)
 	case '(':
@@ -79,6 +87,14 @@ func (l *Lexer) NextToken() token.Token {
 	return tok
 }
 
+func (l *Lexer) peekChar() byte {
+	if l.readPosition >= len(l.input) {
+		return 0
+	} else {
+		return l.input[l.readPosition]
+	}
+}
+
 // this can be abstracted -> either via arg or interfaces
 func (l *Lexer) readNumber() string {
 	position := l.position
@@ -96,6 +112,16 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[position:l.position]
 }
 
+func (l *Lexer) readComparison() (string, bool) {
+	literal := string(l.ch)
+	if (l.peekChar() == '=') {
+		l.readChar()
+		literal += string(l.ch)
+		return literal, true
+	}
+	return literal, false
+}
+
 func (l *Lexer) skipWhitespace() {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		l.readChar()
@@ -109,6 +135,7 @@ func isLetter(ch byte) bool {
 func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
 }
+
 
 // maybe should abstract this creation of token to something else
 func newToken(tokenType token.TokenType, ch byte) token.Token {
