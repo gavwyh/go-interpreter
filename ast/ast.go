@@ -1,13 +1,13 @@
 package ast
 
-import 	"github.com/gavwyh/go-interpreter/token"
+import "github.com/gavwyh/go-interpreter/token"
 
 type Node interface {
 	TokenLiteral() string
 }
 
 type Statement interface {
-	Node 
+	Node
 	statementNode()
 }
 
@@ -18,11 +18,11 @@ type Expression interface {
 
 type LetStatement struct {
 	Token token.Token
-	Name *Identifier
+	Name  *Identifier
 	Value Expression
 }
 
-// root node of every AST 
+// root node of every AST
 type Program struct {
 	Statements []Statement
 }
@@ -48,6 +48,5 @@ func (p *Program) TokenLiteral() string {
 
 func (i *Identifier) expressionNode() {}
 func (i *Identifier) TokenLiteral() string {
-	return ls.Token.Literal
+	return i.Token.Literal
 }
-
