@@ -28,6 +28,7 @@ func TestLetStatements(t *testing.T) {
 			SENTENCES, len(program.Statements))
 	}
 
+	// LET STATEMENT TESTS
 	// tests := []struct {
 	// 	expectedIdentifier string
 	// }{
@@ -42,6 +43,8 @@ func TestLetStatements(t *testing.T) {
 	// 		return
 	// 	}
 	// }
+	
+	// RETURN STATEMENT TESTS
 	for _, statement := range program.Statements {
 		returnStatement, ok := statement.(*ast.ReturnStatement)
 		if !ok {
