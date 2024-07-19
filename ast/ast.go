@@ -22,6 +22,11 @@ type LetStatement struct {
 	Value Expression
 }
 
+type ReturnStatement struct {
+	Token token.Token
+	ReturnValue Expression
+}
+
 // root node of every AST
 type Program struct {
 	Statements []Statement
@@ -50,3 +55,6 @@ func (i *Identifier) expressionNode() {}
 func (i *Identifier) TokenLiteral() string {
 	return i.Token.Literal
 }
+
+func (rs *ReturnStatement) statementNode() {}
+func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }

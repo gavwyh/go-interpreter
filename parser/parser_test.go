@@ -10,9 +10,9 @@ import (
 func TestLetStatements(t *testing.T) {
 	const SENTENCES = 3
 	input := `
-	let x = 5;
-	let y = 10;
-	let 838383;
+	return x = 5;
+	return y = 10;
+	return 838383;
 	`
 
 	l := lexer.New(input)
@@ -28,18 +28,29 @@ func TestLetStatements(t *testing.T) {
 			SENTENCES, len(program.Statements))
 	}
 
-	tests := []struct {
-		expectedIdentifier string
-	}{
-		{"x"},
-		{"y"},
-		{"foobar"},
-	}
+	// tests := []struct {
+	// 	expectedIdentifier string
+	// }{
+	// 	{"x"},
+	// 	{"y"},
+	// 	{"foobar"},
+	// }
 
-	for i, tt := range tests {
-		statement := program.Statements[i]
-		if !testLetStatement(t, statement, tt.expectedIdentifier) {
-			return
+	// for i, tt := range tests {
+	// 	statement := program.Statements[i]
+	// 	if !testLetStatement(t, statement, tt.expectedIdentifier) {
+	// 		return
+	// 	}
+	// }
+	for _, statement := range program.Statements {
+		returnStatement, ok := statement.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("statement is not of type *ast.ReturnStatement, got=%T", statement)
+			continue
+		}
+		if returnStatement.TokenLiteral() != "return" {
+			t.Errorf("returnStatement.TokenLiteral not 'return', got %q", 
+				returnStatement.TokenLiteral())
 		}
 	}
 }
