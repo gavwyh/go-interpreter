@@ -8,14 +8,34 @@ import (
 	"github.com/gavwyh/go-interpreter/ast"
 )
 
+const (
+	_ int = iota
+	LOWEST
+	EQUALS // ==
+	LESSGREATER // > or <
+	SUM // +
+	PRODUCT // *
+	PREFIX // -X or !X
+	CALL // myFunction(X)
+)
+	
+
 type Parser struct {
 	lexer *lexer.Lexer
+	errors []string
 
 	curToken token.Token
 	peekToken token.Token
 
-	errors []string
+	prefixParseFns map[token.TokenType]prefixParseFn
+	infixParseFns map[token.TokenType]infixParseFn
 }
+
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn func(ast.Expression) ast.Expression
+)
+	
 
 func New(lexer *lexer.Lexer) *Parser {
 	parser := &Parser{
@@ -27,6 +47,9 @@ func New(lexer *lexer.Lexer) *Parser {
 		// at EOL or start of arithmetic expression e.g 5; vs 5 * 5;
 	parser.nextToken()
 	parser.nextToken()
+
+	parser.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+	parser.registerPrefix(token.IDENTIFIER, parser.parseIdentifier)
 
 	return parser
 }
@@ -67,8 +90,12 @@ func (parser *Parser) parseStatement() ast.Statement {
 	case token.RETURN:
 		return parser.parseReturnStatement()
 	default:
-		return nil
+		return parser.parseExpressionStatement()
 	}
+}
+
+func (parser *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: parser.curToken, Value: parser.curToken.Literal}
 }
 
 func (parser *Parser) parseLetStatement() *ast.LetStatement {
@@ -101,6 +128,28 @@ func (parser *Parser) parseReturnStatement() *ast.ReturnStatement {
 	return statement
 }
 
+func (parser *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	statement := &ast.ExpressionStatement{Token: parser.curToken}
+
+	statement.Expression = parser.parseExpression(LOWEST)
+
+	if parser.isPeekToken(token.SEMICOLON) {
+		parser.nextToken()
+	}
+
+	return statement
+}
+
+func (parser *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := parser.prefixParseFns[parser.curToken.Type]
+	if prefix == nil {
+		return nil
+	}
+	leftExpression := prefix()
+
+	return leftExpression
+}
+
 func (parser *Parser) isCurToken(t token.TokenType) bool { return parser.curToken.Type == t }
 
 func (parser *Parser) isPeekToken(t token.TokenType) bool { return parser.peekToken.Type == t }
@@ -112,4 +161,12 @@ func (parser *Parser) peekExpected(expectedType token.TokenType) bool {
 	}
 	parser.addError(expectedType)
 	return false;
+}
+
+func (parser *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
+	parser.prefixParseFns[tokenType] = fn;
+}
+
+func (parser *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
+	parser.infixParseFns[tokenType] = fn;
 }

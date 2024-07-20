@@ -2,17 +2,17 @@ package parser
 
 import (
 	"testing"
-	
-	"github.com/gavwyh/go-interpreter/lexer"
+
 	"github.com/gavwyh/go-interpreter/ast"
+	"github.com/gavwyh/go-interpreter/lexer"
 )
 
 func TestLetStatements(t *testing.T) {
 	const SENTENCES = 3
 	input := `
-	return x = 5;
-	return y = 10;
-	return 838383;
+	let x = 5;
+	let y = 10;
+	let foobar = 838383;
 	`
 
 	l := lexer.New(input)
@@ -28,32 +28,18 @@ func TestLetStatements(t *testing.T) {
 			SENTENCES, len(program.Statements))
 	}
 
-	// LET STATEMENT TESTS
-	// tests := []struct {
-	// 	expectedIdentifier string
-	// }{
-	// 	{"x"},
-	// 	{"y"},
-	// 	{"foobar"},
-	// }
+	tests := []struct {
+		expectedIdentifier string
+	}{
+		{"x"},
+		{"y"},
+		{"foobar"},
+	}
 
-	// for i, tt := range tests {
-	// 	statement := program.Statements[i]
-	// 	if !testLetStatement(t, statement, tt.expectedIdentifier) {
-	// 		return
-	// 	}
-	// }
-	
-	// RETURN STATEMENT TESTS
-	for _, statement := range program.Statements {
-		returnStatement, ok := statement.(*ast.ReturnStatement)
-		if !ok {
-			t.Errorf("statement is not of type *ast.ReturnStatement, got=%T", statement)
-			continue
-		}
-		if returnStatement.TokenLiteral() != "return" {
-			t.Errorf("returnStatement.TokenLiteral not 'return', got %q", 
-				returnStatement.TokenLiteral())
+	for i, tt := range tests {
+		statement := program.Statements[i]
+		if !testLetStatement(t, statement, tt.expectedIdentifier) {
+			return
 		}
 	}
 }
@@ -80,8 +66,82 @@ func testLetStatement(t *testing.T, statement ast.Statement, identifier string) 
 		return false
 	}
 
-	return true;
-		
+	return true
+
+}
+
+func TestReturnStatements(t *testing.T) {
+	const SENTENCES = 3
+	input := `
+	return x = 5;
+	return y = 10;
+	return 838383;
+	`
+
+	l := lexer.New(input)
+	parser := New(l)
+
+	program := parser.ParseProgram()
+	checkParserErrors(t, parser)
+	if program == nil {
+		t.Fatalf("ParseProgram() returned nil")
+	}
+
+	if len(program.Statements) != SENTENCES {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d",
+			SENTENCES, len(program.Statements))
+	}
+
+	for _, statement := range program.Statements {
+		returnStatement, ok := statement.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("statement is not of type *ast.ReturnStatement, got=%T", statement)
+			continue
+		}
+		if returnStatement.TokenLiteral() != "return" {
+			t.Errorf("returnStatement.TokenLiteral not 'return', got %q",
+				returnStatement.TokenLiteral())
+		}
+	}
+}
+
+func TestIdentifierExpression(t *testing.T) {
+	const SENTENCES = 1;
+	input := "foobar;"
+
+	l := lexer.New(input)
+	parser := New(l)
+	program := parser.ParseProgram()
+	checkParserErrors(t, parser)
+
+	if program == nil {
+		t.Fatalf("ParseProgram() returned nil")
+	}
+
+	if len(program.Statements) != SENTENCES {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d",
+			SENTENCES, len(program.Statements))
+	}
+
+	statement, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+		program.Statements[0])
+	}
+
+	identifier, ok := statement.Expression.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("exp not *ast.Identifier. got=%T", statement.Expression)
+	}
+
+	if identifier.Value != "foobar" {
+		t.Errorf("ident.Value not %s. got=%s", "foobar", identifier.Value)
+	}
+
+	if identifier.TokenLiteral() != "foobar" {
+		t.Errorf("ident.TokenLiteral not %s. got=%s", "foobar",
+		identifier.TokenLiteral())
+	}
 }
 
 func checkParserErrors(t *testing.T, parser *Parser) {
