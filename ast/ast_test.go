@@ -21,7 +21,7 @@ func TestString(t *testing.T) {
 				},
 			},
 		},
-	},
+	}
 
 	if program.String() != "let x = y;" {
 		t.Errorf("program.String() wrong. got=%q", program.String())
