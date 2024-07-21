@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/gavwyh/go-interpreter/token"
 	"github.com/gavwyh/go-interpreter/lexer"
@@ -50,6 +51,7 @@ func New(lexer *lexer.Lexer) *Parser {
 
 	parser.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	parser.registerPrefix(token.IDENTIFIER, parser.parseIdentifier)
+	parser.registerPrefix(token.INT, parser.parseIntegerLiteral)
 
 	return parser
 }
@@ -148,6 +150,21 @@ func (parser *Parser) parseExpression(precedence int) ast.Expression {
 	leftExpression := prefix()
 
 	return leftExpression
+}
+
+func (parser *Parser) parseIntegerLiteral() ast.Expression {
+	literal := &ast.IntegerLiteral{Token: parser.curToken}
+
+	value, err := strconv.ParseInt(parser.curToken.Literal, 0, 64)
+
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as an integer", parser.curToken.Literal)
+		parser.errors = append(parser.errors, msg);
+		return nil;
+	}
+
+	literal.Value = value;
+	return literal;
 }
 
 func (parser *Parser) isCurToken(t token.TokenType) bool { return parser.curToken.Type == t }
