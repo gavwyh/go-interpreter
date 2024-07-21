@@ -52,6 +52,8 @@ func New(lexer *lexer.Lexer) *Parser {
 	parser.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	parser.registerPrefix(token.IDENTIFIER, parser.parseIdentifier)
 	parser.registerPrefix(token.INT, parser.parseIntegerLiteral)
+	parser.registerPrefix(token.BANG, parser.parsePrefixExpression)
+	parser.registerPrefix(token.MINUS, parser.parsePrefixExpression)
 
 	return parser
 }
@@ -145,6 +147,7 @@ func (parser *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 func (parser *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := parser.prefixParseFns[parser.curToken.Type]
 	if prefix == nil {
+		parser.noPrefixParseFnError(parser.curToken.Type)
 		return nil
 	}
 	leftExpression := prefix()
@@ -167,9 +170,26 @@ func (parser *Parser) parseIntegerLiteral() ast.Expression {
 	return literal;
 }
 
-func (parser *Parser) isCurToken(t token.TokenType) bool { return parser.curToken.Type == t }
+func (parser *Parser) parsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Token: parser.curToken,
+		Operator: parser.curToken.Literal,
+	}
 
-func (parser *Parser) isPeekToken(t token.TokenType) bool { return parser.peekToken.Type == t }
+	parser.nextToken()
+
+	expression.Right = parser.parseExpression(PREFIX)
+
+	return expression
+}
+
+func (parser *Parser) isCurToken(tokenType token.TokenType) bool { 
+	return parser.curToken.Type == tokenType 
+}
+
+func (parser *Parser) isPeekToken(tokenType token.TokenType) bool { 
+	return parser.peekToken.Type == tokenType 
+}
 
 func (parser *Parser) peekExpected(expectedType token.TokenType) bool {
 	if parser.isPeekToken(expectedType) {
@@ -186,4 +206,9 @@ func (parser *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn
 
 func (parser *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
 	parser.infixParseFns[tokenType] = fn;
+}
+
+func (parser *Parser) noPrefixParseFnError(tokenType token.TokenType) {
+	msg := fmt.Sprintf("no prefix parse function for %s found", tokenType)
+	parser.errors = append(parser.errors, msg)
 }
