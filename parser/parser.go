@@ -183,6 +183,7 @@ func (parser *Parser) parsePrefixExpression() ast.Expression {
 	return expression
 }
 
+
 func (parser *Parser) isCurToken(tokenType token.TokenType) bool { 
 	return parser.curToken.Type == tokenType 
 }
