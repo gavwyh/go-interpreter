@@ -172,6 +172,16 @@ func (parser *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExpression := prefix()
 
+	for !parser.isPeekToken(token.SEMICOLON) && precedence < parser.peekPrecedence() {
+		infix := parser.infixParseFns[parser.peekToken.Type]
+		if infix == nil {
+			return leftExpression
+		}
+
+		parser.nextToken()
+
+		leftExpression = infix(leftExpression)
+	}
 	return leftExpression
 }
 
@@ -212,6 +222,8 @@ func (parser *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	precedence := parser.curPrecedence();
 	parser.nextToken()
 	expression.Right = parser.parseExpression(precedence)
+
+	return expression
 }
 
 func (parser *Parser) isCurToken(tokenType token.TokenType) bool { 
