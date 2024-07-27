@@ -68,6 +68,7 @@ func New(lexer *lexer.Lexer) *Parser {
 	parser.registerPrefix(token.FALSE, parser.parseBoolean)
 	parser.registerPrefix(token.LPAREN, parser.parseGroupedExpression)
 	parser.registerPrefix(token.IF, parser.parseIfExpression)
+	parser.registerPrefix(token.FUNCTION, parser.parseFunctionLiteral)
 
 	parser.infixParseFns = make(map[token.TokenType]infixParseFn)
 	parser.registerInfix(token.PLUS, parser.parseInfixExpression)
@@ -129,6 +130,7 @@ func (parser *Parser) parseIdentifier() ast.Expression {
 func (parser *Parser) parseBoolean() ast.Expression {
 	return &ast.Boolean{Token: parser.curToken, Value: parser.isCurToken(token.TRUE)}
 }
+
 func (parser *Parser) parseLetStatement() *ast.LetStatement {
 	statement := &ast.LetStatement{Token: parser.curToken}
 
@@ -209,21 +211,68 @@ func (parser *Parser) parseExpression(precedence int) ast.Expression {
 }
 
 func (parser *Parser) parseIntegerLiteral() ast.Expression {
-	const MIN_BIT = 0;
-	const MAX_BITS = 64;
+	const MIN_BIT = 0
+	const MAX_BITS = 64
 
 	literal := &ast.IntegerLiteral{Token: parser.curToken}
 
-	value, err := strconv.ParseInt(parser.curToken.Literal, MIN_BIT, MAX_BITS);
+	value, err := strconv.ParseInt(parser.curToken.Literal, MIN_BIT, MAX_BITS)
 
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as an integer", parser.curToken.Literal)
-		parser.errors = append(parser.errors, msg);
-		return nil;
+		parser.errors = append(parser.errors, msg)
+		return nil
 	}
 
-	literal.Value = value;
-	return literal;
+	literal.Value = value
+	return literal
+}
+
+func (parser *Parser) parseFunctionLiteral() ast.Expression {
+	literal := &ast.FunctionLiteral{Token: parser.curToken}
+
+	if !parser.peekExpected(token.LPAREN) {
+		return nil
+	}
+
+	literal.Parameters = parser.parseFunctionParameters()
+
+	if !parser.peekExpected(token.LBRACE) {
+		return nil
+	}
+
+	literal.Body = parser.parseBlockStatement()
+
+	return literal
+}
+
+func (parser *Parser) parseFunctionParameters() []*ast.Identifier {
+	identifiers := []*ast.Identifier{}
+
+	if parser.isPeekToken(token.RPAREN) {
+		parser.nextToken()
+		return identifiers
+	}
+
+	parser.nextToken()
+
+	identifier := &ast.Identifier{Token: parser.curToken, Value: parser.curToken.Literal}
+	identifiers = append(identifiers, identifier)
+
+	for parser.isPeekToken(token.COMMA) {
+		// fn(x,y) => fn(x,y) 
+		//    |            |
+		parser.nextToken()
+		parser.nextToken()
+		identifier := &ast.Identifier{Token: parser.curToken, Value: parser.curToken.Literal}
+		identifiers = append(identifiers, identifier)
+	}
+
+	if !parser.peekExpected(token.RPAREN) {
+		return nil
+	}
+
+	return identifiers
 }
 
 func (parser *Parser) parseIfExpression() ast.Expression {
