@@ -186,9 +186,12 @@ func (parser *Parser) parseExpression(precedence int) ast.Expression {
 }
 
 func (parser *Parser) parseIntegerLiteral() ast.Expression {
+	const MIN_BIT = 0;
+	const MAX_BITS = 64;
+
 	literal := &ast.IntegerLiteral{Token: parser.curToken}
 
-	value, err := strconv.ParseInt(parser.curToken.Literal, 0, 64)
+	value, err := strconv.ParseInt(parser.curToken.Literal, MIN_BIT, MAX_BITS);
 
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as an integer", parser.curToken.Literal)
