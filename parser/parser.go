@@ -66,6 +66,8 @@ func New(lexer *lexer.Lexer) *Parser {
 	parser.registerPrefix(token.MINUS, parser.parsePrefixExpression)
 	parser.registerPrefix(token.TRUE, parser.parseBoolean)
 	parser.registerPrefix(token.FALSE, parser.parseBoolean)
+	parser.registerPrefix(token.LPAREN, parser.parseGroupedExpression)
+	parser.registerPrefix(token.IF, parser.parseIfExpression)
 
 	parser.infixParseFns = make(map[token.TokenType]infixParseFn)
 	parser.registerInfix(token.PLUS, parser.parseInfixExpression)
@@ -157,6 +159,22 @@ func (parser *Parser) parseReturnStatement() *ast.ReturnStatement {
 	return statement
 }
 
+func (parser *Parser) parseBlockStatement() *ast.BlockStatement {
+	block := &ast.BlockStatement{Token: parser.curToken}
+	block.Statements = []ast.Statement{}
+
+	parser.nextToken()
+
+	for !parser.isCurToken(token.RBRACE) && !parser.isCurToken(token.EOF) {
+		statement := parser.parseStatement()
+		if statement != nil {
+			block.Statements = append(block.Statements, statement)
+		}
+		parser.nextToken()
+	}
+	return block
+}
+
 func (parser *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	statement := &ast.ExpressionStatement{Token: parser.curToken}
 
@@ -208,6 +226,40 @@ func (parser *Parser) parseIntegerLiteral() ast.Expression {
 	return literal;
 }
 
+func (parser *Parser) parseIfExpression() ast.Expression {
+	expression := &ast.IfExpression{Token: parser.curToken}
+
+	if !parser.peekExpected(token.LPAREN) {
+		return nil
+	}
+
+	parser.nextToken()
+	expression.Condition = parser.parseExpression(LOWEST)
+
+	if !parser.peekExpected(token.RPAREN) {
+		return nil
+	}
+
+	if !parser.peekExpected(token.LBRACE) {
+		return nil
+	}
+
+	expression.Consequence = parser.parseBlockStatement()
+
+	if !parser.isPeekToken(token.ELSE) {
+		return expression
+	}
+
+	parser.nextToken()
+
+	if !parser.peekExpected(token.LBRACE) {
+		return nil
+	}
+	expression.Alternative = parser.parseBlockStatement()
+
+	return expression
+}
+
 func (parser *Parser) parsePrefixExpression() ast.Expression {
 	expression := &ast.PrefixExpression{
 		Token: parser.curToken,
@@ -230,6 +282,18 @@ func (parser *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	precedence := parser.curPrecedence();
 	parser.nextToken()
 	expression.Right = parser.parseExpression(precedence)
+
+	return expression
+}
+
+func (parser *Parser) parseGroupedExpression() ast.Expression {
+	parser.nextToken()
+
+	expression := parser.parseExpression(LOWEST)
+
+	if !parser.peekExpected(token.RPAREN) {
+		return nil
+	}
 
 	return expression
 }
