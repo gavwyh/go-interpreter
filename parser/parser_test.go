@@ -145,6 +145,27 @@ func TestIdentifierExpression(t *testing.T) {
 	}
 }
 
+func testIdentifier(t *testing.T, expression ast.Expression, value string) bool {
+	identifier, ok := expression.(*ast.Identifier)
+	
+	if !ok {
+		t.Errorf("expression not *ast.Identifer. got=%T", expression)
+		return false
+	}
+
+	if identifier.Value != value {
+		t.Errorf("identifier.Value not %s. got=%s", value, identifier.Value)
+		return false
+	}
+
+	if identifier.TokenLiteral() != value {
+		t.Errorf("identifier.TokenLiteral not %s. got=%s", value, identifier.TokenLiteral())
+		return false
+	}
+
+	return true
+}
+
 func TestIntegerLiteralExpression(t *testing.T) {
 	const SENTENCES = 1;
 	input := "5;"
@@ -305,6 +326,48 @@ func TestParsingInfixExpressions(t *testing.T) {
 
 	}
 }
+
+func testLiteralExpression(t *testing.T, expression ast.Expression, expected interface{}) bool {
+	switch TYPE := expected.(type) {
+	case int:
+		return testIntegerLiteral(t, expression, int64(TYPE))
+	case int64:
+		return testIntegerLiteral(t, expression, TYPE)
+	case string:
+		return testIdentifier(t, expression, TYPE)
+	}
+
+	t.Errorf("type of expression not handled. got=%T", expression)
+	return false
+}
+
+func testInfixExpression(t *testing.T, expression ast.Expression, left interface{},
+	operator string, right interface{}) bool {
+	
+	infixExpression, ok := expression.(*ast.InfixExpression)
+
+	if !ok {
+		t.Errorf("expression is not ast.InfixExpression. got=%T(%s)", infixExpression, 
+			infixExpression)
+		return false
+	}
+
+	if !testLiteralExpression(t, infixExpression.Left, left) {
+		return false
+	}
+
+	if infixExpression.Operator != operator {
+		t.Errorf("expression.Operator is not '%s'. got=%q", operator, infixExpression.Operator)
+		return false
+	}
+
+	if !testLiteralExpression(t, infixExpression.Right, right) {
+		return false
+	}
+
+	return true
+}
+
 func checkParserErrors(t *testing.T, parser *Parser) {
 	errors := parser.Errors()
 	if len(errors) == 0 {
